@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { sendChatMessage } from "../services/chatService";
 
 export function useChat() {
   const [messages, setMessages] = useState([
@@ -10,7 +11,10 @@ export function useChat() {
     },
   ]);
 
-  const sendMessage = (text) => {
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async (text) => {
+    // Add user's message immediately
     const userMessage = {
       id: Date.now(),
       sender: "user",
@@ -18,10 +22,38 @@ export function useChat() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+
+    setLoading(true);
+
+    try {
+      // Call FastAPI
+      const aiResponse = await sendChatMessage(text);
+
+      const aiMessage = {
+        id: Date.now() + 1,
+        sender: "ai",
+        text: aiResponse,
+      };
+
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        sender: "ai",
+        text: "❌ Unable to connect to the Hospital AI server.",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return {
     messages,
     sendMessage,
+    loading,
   };
 }
